@@ -74,7 +74,7 @@ def git_push_task_gen(config):
 def publish_dumps_task_gen(dumps_dir, files):
 
     file_deps = ['dist/{}'.format(filename) for filename in files]
-    actions = ['mkdir -p {0}'.format(config['dumps_dir'])]
+    actions = ['mkdir -p {0}'.format(dumps_dir)]
     targets = []
     for filename in files:
         actions.extend([
