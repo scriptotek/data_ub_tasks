@@ -99,14 +99,15 @@ def publish_dumps_task_gen(dumps_dir, files):
     }
 
 
-def fuseki_task_gen(config):
+def fuseki_task_gen(config, filename='dist/%(basename)s.ttl'):
+    filename = filename % config
     return {
         'doc': 'Push updated RDF to Fuseki',
         'file_dep': [
-            'dist/%s.ttl' % config['basename']
+            filename
         ],
         'actions': [
-            (update_fuseki, [], {'config': config})
+            (update_fuseki, [], {'config': config, 'filename': filename})
         ]
     }
 
@@ -159,12 +160,12 @@ def load_vocabulary(sourcefile):
     return graph
 
 
-def update_fuseki(config):
+def update_fuseki(config, filename):
 
-    source = load_vocabulary('dist/%s.ttl' % config['basename'])
+    source = load_vocabulary(filename)
 
     c0 = get_graph_count(config)
-    logger.info("Fuseki: Pushing dist/%s.ttl", config['basename'])
+    logger.info("Fuseki: Pushing %s", filename)
 
     store = SPARQLUpdateStore('{}/sparql'.format(config['fuseki']), '{}/update'.format(config['fuseki']))
     context = Graph(store, URIRef(config['graph']))
