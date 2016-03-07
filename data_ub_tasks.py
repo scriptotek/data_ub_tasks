@@ -3,7 +3,7 @@ import os
 import requests
 from skosify import Skosify
 import textwrap
-from SPARQLWrapper import SPARQLWrapper, JSON
+import SPARQLWrapper
 from rdflib.graph import Graph, URIRef
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 import logging
@@ -114,7 +114,9 @@ def fuseki_task_gen(config, filename='dist/%(basename)s.ttl'):
 
 def get_graph_count(config):
     logger.info('Querying {}/sparql'.format(config['fuseki']))
-    sparql = SPARQLWrapper('{}/sparql'.format(config['fuseki']))
+    sparql = SPARQLWrapper.SPARQLWrapper('{}/sparql'.format(config['fuseki']))
+    sparql.setMethod(SPARQLWrapper.POST)  # to avoid caching
+    sparql.setReturnFormat(SPARQLWrapper.JSON)
     sparql.setQuery(textwrap.dedent("""
         PREFIX skos: <http://www.w3.org/2004/02/skos/core#>
 
@@ -125,7 +127,6 @@ def get_graph_count(config):
            }
         }
     """ % (config['graph'])))
-    sparql.setReturnFormat(JSON)
     results = sparql.query().convert()
     count = results['results']['bindings'][0]['conceptCount']['value']
     return int(count)
