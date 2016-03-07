@@ -99,15 +99,15 @@ def publish_dumps_task_gen(dumps_dir, files):
     }
 
 
-def fuseki_task_gen(config, filename='dist/%(basename)s.ttl'):
-    filename = filename % config
+def fuseki_task_gen(config, files=None):
+    if files is None:
+        files = ['dist/%(basename)s.ttl']
+    files = [f % config for f in files]
     return {
         'doc': 'Push updated RDF to Fuseki',
-        'file_dep': [
-            filename
-        ],
+        'file_dep': files,
         'actions': [
-            (update_fuseki, [], {'config': config, 'filename': filename})
+            (update_fuseki, [], {'config': config, 'files': files})
         ]
     }
 
@@ -148,9 +148,10 @@ def quads(iterable, context, chunk_size=20000):
             chunk = []
 
 
-def load_vocabulary(sourcefile):
+def load_vocabulary(files):
     graph = Graph()
-    graph.load(sourcefile, format='turtle')
+    for sourcefile in files:
+        graph.load(sourcefile, format='turtle')
 
     skosify = Skosify()
 
@@ -161,12 +162,12 @@ def load_vocabulary(sourcefile):
     return graph
 
 
-def update_fuseki(config, filename):
+def update_fuseki(config, files):
 
-    source = load_vocabulary(filename)
+    source = load_vocabulary(files)
 
     c0 = get_graph_count(config)
-    logger.info("Fuseki: Pushing %s", filename)
+    logger.info("Fuseki: Pushing %s", ', '.join(files))
 
     store = SPARQLUpdateStore('{}/sparql'.format(config['fuseki']), '{}/update'.format(config['fuseki']))
 
