@@ -169,8 +169,13 @@ def update_fuseki(config, filename):
     logger.info("Fuseki: Pushing %s", filename)
 
     store = SPARQLUpdateStore('{}/sparql'.format(config['fuseki']), '{}/update'.format(config['fuseki']))
+
     context = Graph(store, URIRef(config['graph']))
 
+    logger.info("Fuseki: Clearing graph %s", config['graph'])
+    store.remove_graph(context)
+
+    logger.info("Fuseki: Chunk-adding triples into graph %s", config['graph'])
     for q in quads(source.triples((None, None, None)), context):
         logger.info('Chunk %d', len(q))
         store.addN(q)
