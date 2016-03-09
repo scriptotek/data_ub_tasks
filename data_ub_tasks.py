@@ -169,16 +169,27 @@ def enrich_and_concat(files, out_file):
 
 def update_fuseki(config, files):
     """
-    The current procedure looks quite silly, but I couldn't find a way to push a large number of triples to Fuseki in a streaming manner.
-     - Using INSERT DATA with lots of triples caused Fuseki to 500.
-     - Using INSERT DATA with chunks of about 20000 triples worked well when there were no blank nodes... but broke RDF lists with bnodes.
+    The current procedure first dumps the enriched graph to a temporary file in a dir accessible by
+    the web server, then loads the file using the SPARQL LOAD operation.
 
-            Variables in QuadDatas are disallowed in INSERT DATA requests (see Notes 8 in the grammar). That is, the INSERT DATA statement
-            only allows to insert ground triples. Blank nodes in QuadDatas are assumed to be disjoint from the blank nodes in the Graph Store,
+    I first tried pushing the enriched graph directly to the update endpoint
+    without writing a temporary file, but that approach failed for two reasons:
+     - Using INSERT DATA with "lots" of triples (>> 20k) caused Fuseki to give a 500 response.
+     - Using INSERT DATA with chunks of 20k triples worked well... when there were no blank nodes.
+       If the same bnode were referenced in two different chunks, it would end up as *two* bnodes.
+       Since we're using bnodes in RDF lists, many lists ended up broken. From the SPARQL ref.:
+
+            Variables in QuadDatas are disallowed in INSERT DATA requests (see Notes 8 in the grammar).
+            That is, the INSERT DATA statement only allows to insert ground triples. Blank nodes in
+            QuadDatas are assumed to be disjoint from the blank nodes in the Graph Store,
             i.e., will be inserted with "fresh" blank nodes.
 
-     - We could use tdbloader, but then we have to shut down the server and put the data on a volume accessible to the docker container..
-       Quite a mess, so we stick with LOAD for now.
+    Using tdbloader would be another option, but then we would still need a temp file, we would also need
+    to put that file on a volume accessible to the docker container, and we would need to shutdown the
+    server while loading the file. And it's a solution tied to Fuseki.
+
+    I'm not aware if there is a limit on how large graphs Fuseki can load with the LOAD operation.
+    I guess we'll find out.
     """
 
     if config['dumps_dir'] is None:
