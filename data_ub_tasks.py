@@ -148,7 +148,7 @@ def quads(iterable, context, chunk_size=20000):
             chunk = []
 
 
-def load_vocabulary(files):
+def enrich_and_concat(files, out_file):
     graph = Graph()
     for sourcefile in files:
         graph.load(sourcefile, format='turtle')
@@ -159,27 +159,50 @@ def load_vocabulary(files):
     logger.info("PostProcess: Enriching relations")
     skosify.enrich_relations(graph, False, True, True)
 
-    return graph
+    graph.serialize(out_file, format='turtle')
+
+    return len(graph)
 
 
 def update_fuseki(config, files):
+    """
+    The current procedure looks quite silly, but I couldn't find a way to push a large number of triples to Fuseki in a streaming manner.
+     - Using INSERT DATA with lots of triples caused Fuseki to 500.
+     - Using INSERT DATA with chunks of about 20000 triples worked well when there were no blank nodes... but broke RDF lists with bnodes.
 
-    source = load_vocabulary(files)
+            Variables in QuadDatas are disallowed in INSERT DATA requests (see Notes 8 in the grammar). That is, the INSERT DATA statement
+            only allows to insert ground triples. Blank nodes in QuadDatas are assumed to be disjoint from the blank nodes in the Graph Store,
+            i.e., will be inserted with "fresh" blank nodes.
+
+     - We could use tdbloader, but then we have to shut down the server and put the data on a volume accessible to the docker container..
+       Quite a mess, so we stick with LOAD for now.
+    """
+
+    if config['dumps_dir'] is None:
+        raise Exception("The 'dumps_dir' option must be set")
+
+    if config['dumps_dir_url'] is None:
+        raise Exception("The 'dumps_dir_url' option must be set")
+
+    tmpfile = '{}/import_{}.ttl'.format(config['dumps_dir'].rstrip('/'), config['basename'])
+    tmpfile_url = '{}/import_{}.ttl'.format(config['dumps_dir_url'].rstrip('/'), config['basename'])
+
+    tc = enrich_and_concat(files, tmpfile)
 
     c0 = get_graph_count(config)
-    logger.info("Fuseki: Pushing %s", ', '.join(files))
 
     store = SPARQLUpdateStore('{}/sparql'.format(config['fuseki']), '{}/update'.format(config['fuseki']))
+    graph_uri = URIRef(config['graph'])
+    graph = Graph(store, graph_uri)
 
-    context = Graph(store, URIRef(config['graph']))
+    logger.info("Fuseki: Loading %d triples into %s from %s", tc, graph_uri, tmpfile_url)
 
-    logger.info("Fuseki: Clearing graph %s", config['graph'])
-    store.remove_graph(context)
-
-    logger.info("Fuseki: Chunk-adding triples into graph %s", config['graph'])
-    for q in quads(source.triples((None, None, None)), context):
-        logger.info('Chunk %d', len(q))
-        store.addN(q)
+    store.remove_graph(graph)
+    store.add_graph(graph)
+    store.update('LOAD <{}> INTO GRAPH <{}>'.format(tmpfile_url, graph_uri))
 
     c1 = get_graph_count(config)
-    logger.info('Fuseki: Graph <%s> updated, from %d to %d concepts.', config['graph'], c0, c1)
+    if c0 == c1:
+        logger.info('Fuseki: Graph <%s> updated, number of concepts unchanged')
+    else:
+        logger.info('Fuseki: Graph <%s> updated, number of concepts changed from %d to %d.', config['graph'], c0, c1)
