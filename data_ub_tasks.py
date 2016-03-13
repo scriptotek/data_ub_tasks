@@ -113,7 +113,7 @@ def fuseki_task_gen(config, files=None):
 
 
 def get_graph_count(config):
-    logger.info('Querying {}/sparql'.format(config['fuseki']))
+    # logger.info('Querying {}/sparql'.format(config['fuseki']))
     sparql = SPARQLWrapper.SPARQLWrapper('{}/sparql'.format(config['fuseki']))
     sparql.setMethod(SPARQLWrapper.POST)  # to avoid caching
     sparql.setReturnFormat(SPARQLWrapper.JSON)
@@ -156,7 +156,7 @@ def enrich_and_concat(files, out_file):
     skosify = Skosify()
 
     # Enrichments: broader <-> narrower, related <-> related
-    logger.info("PostProcess: Enriching relations")
+    logger.info("Skosify: Enriching relations")
     skosify.enrich_relations(graph, False, True, True)
 
     # For some reason, Python created a with 0600 here, so we use os.open to force 0664
@@ -209,7 +209,7 @@ def update_fuseki(config, files):
     graph_uri = URIRef(config['graph'])
     graph = Graph(store, graph_uri)
 
-    logger.info("Fuseki: Loading %d triples into %s from %s", tc, graph_uri, tmpfile_url)
+    logger.info("Fuseki: Loading %d triples into <%s> from %s", tc, graph_uri, tmpfile_url)
 
     store.remove_graph(graph)
     store.add_graph(graph)
@@ -217,6 +217,6 @@ def update_fuseki(config, files):
 
     c1 = get_graph_count(config)
     if c0 == c1:
-        logger.info('Fuseki: Graph <%s> updated, number of concepts unchanged')
+        logger.info('Fuseki: Graph <%s> updated, number of concepts unchanged', config['graph'])
     else:
         logger.info('Fuseki: Graph <%s> updated, number of concepts changed from %d to %d.', config['graph'], c0, c1)
