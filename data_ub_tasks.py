@@ -60,8 +60,6 @@ def git_push_task_gen(config):
         'doc': 'Commit and push updated files to GitHub',
         'basename': 'git-push',
         'file_dep': [
-            '%s.json' % config['basename'],
-            'dist/%s.marc21.xml' % config['basename'],
             'dist/%s.ttl' % config['basename']
         ],
         'actions': [
