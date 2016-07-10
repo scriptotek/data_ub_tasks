@@ -160,10 +160,10 @@ def enrich_and_concat(files, out_file):
     logger.debug("Skosify: Enriching relations")
     skosify.enrich_relations(graph, False, True, True)
 
-    # For some reason, Python created a with 0600 here, so we use os.open to force 0664
-    # <http://stackoverflow.com/a/5624691>
-    with os.fdopen(os.open(out_file, os.O_WRONLY | os.O_CREAT, 0664), 'w') as handle:
+    with open(out_file + '.tmp', 'w') as handle:
         graph.serialize(handle, format='turtle')
+
+    os.rename(out_file + '.tmp', out_file)
 
     return len(graph)
 
