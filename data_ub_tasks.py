@@ -7,6 +7,9 @@ import SPARQLWrapper
 from rdflib.graph import Graph, URIRef
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 import logging
+logging.getLogger('requests').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -20,10 +23,10 @@ def download(remote, local):
             if not block:
                 break
             out_file.write(block)
-    logger.info('Fetched new version of %s', remote)
+    logger.info('Fetched updated version of %s', remote)
 
 def fetch_remote(task, remote, etag_cache):
-    logger.info('Checking %s', remote)
+    logger.debug('Checking %s', remote)
     head = requests.head(remote)
     if head.status_code != 200:
         logger.warn('Got status code: %s', head.status_code)
@@ -37,11 +40,11 @@ def fetch_remote(task, remote, etag_cache):
         else:
             local_etag = '0'
 
-        logger.info('   Remote file etag: %s', remote_etag)
-        logger.info('    Local file etag: %s', local_etag)
+        logger.debug('   Remote file etag: %s', remote_etag)
+        logger.debug('    Local file etag: %s', local_etag)
 
         if remote_etag == local_etag:
-            logger.info(' -> Local data are up-to-date.')
+            logger.debug(' -> Local data are up-to-date.')
             task.uptodate = True
             return
 
@@ -156,7 +159,7 @@ def enrich_and_concat(files, out_file):
     skosify = Skosify()
 
     # Enrichments: broader <-> narrower, related <-> related
-    logger.info("Skosify: Enriching relations")
+    logger.debug("Skosify: Enriching relations")
     skosify.enrich_relations(graph, False, True, True)
 
     # For some reason, Python created a with 0600 here, so we use os.open to force 0664
