@@ -168,6 +168,11 @@ def enrich_and_concat(files, out_file):
     return len(graph)
 
 
+def invalidate_varnish_cache(pattern):
+    response = requests.request('BAN', 'http://localhost:3030', headers={'X-Ban-Url': pattern})
+    response.raise_for_status()
+
+
 def update_fuseki(config, files):
     """
     The current procedure first dumps the enriched graph to a temporary file in a dir accessible by
@@ -221,3 +226,6 @@ def update_fuseki(config, files):
         logger.info('Fuseki: Graph <%s> updated, number of concepts unchanged', config['graph'])
     else:
         logger.info('Fuseki: Graph <%s> updated, number of concepts changed from %d to %d.', config['graph'], c0, c1)
+
+    invalidate_varnish_cache(config['basename'])
+    logger.info('Invalidated Varnish cache for %s', config['basename'])
