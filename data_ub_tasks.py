@@ -67,7 +67,7 @@ def git_push_task_gen(config):
             'git config user.email "danmichaelo+ubobot@gmail.com"',
             'git add -u',
             'git diff-index --quiet --cached HEAD || git commit -m "Data update"',
-            'git push --mirror origin'  # locally updated refs will be force updated on the remote end !
+            'git push --mirror origin',  # locally updated refs will be force updated on the remote end !
             'git config --unset user.name',
             'git config --unset user.email',
         ]
