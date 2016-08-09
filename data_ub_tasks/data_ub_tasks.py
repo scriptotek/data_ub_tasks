@@ -2,6 +2,7 @@
 import os
 import requests
 from skosify import Skosify
+import hashlib
 from .ttl2solr import ttl2solr
 import textwrap
 import SPARQLWrapper
@@ -24,7 +25,23 @@ def download(remote, local):
             if not block:
                 break
             out_file.write(block)
-    logger.info('Fetched updated version of %s', remote)
+
+def sha1(filename):
+    BUF_SIZE = 65536  # lets read stuff in 64kb chunks
+    sha1 = hashlib.sha1()
+
+    try:
+        with open(filename, 'rb') as f:
+            while True:
+                data = f.read(BUF_SIZE)
+                if not data:
+                    break
+                sha1.update(data)
+    except IOError:
+        return ''
+
+    return sha1.hexdigest()
+
 
 def fetch_remote(task, remote, etag_cache):
     logger.debug('Checking %s', remote)
@@ -49,12 +66,16 @@ def fetch_remote(task, remote, etag_cache):
             task.uptodate = True
             return
 
+        old_sha1 = sha1(task.targets[0])
         download(remote, task.targets[0])
+        new_sha1 = sha1(task.targets[0])
 
         with open(etag_cache, 'wb') as f:
             f.write(remote_etag.encode('utf-8'))
 
-        task.uptodate = False
+        if old_sha1 != new_sha1:
+            logger.info('%s changed from  %s to %s', remote.split('/')[-1], old_sha1[:7], new_sha1[:7])
+            task.uptodate = False
 
 def git_push_task_gen(config):
     return {
