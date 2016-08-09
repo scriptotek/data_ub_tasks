@@ -2,6 +2,7 @@
 import os
 import requests
 from skosify import Skosify
+from .ttl2solr import ttl2solr
 import textwrap
 import SPARQLWrapper
 from rdflib.graph import Graph, URIRef
@@ -229,3 +230,21 @@ def update_fuseki(config, files):
 
     invalidate_varnish_cache(config['basename'])
     logger.info('Invalidated Varnish cache for %s', config['basename'])
+
+def gen_solr_json(config, vocab_name=None):
+    ttl_file = 'dist/%(basename)s.ttl' % config
+    json_file = 'dist/%(basename)s.json' % config
+
+    return {
+        'basename': 'build-solr-json',
+        'doc': 'Generate SOLR JSON from Turtle',
+        'file_dep': [
+            ttl_file
+        ],
+        'targets': [
+            json_file
+        ],
+        'actions': [
+            (ttl2solr, [], {'infile': ttl_file, 'outfile': json_file, 'vocab_name': vocab_name})
+        ]
+    }
