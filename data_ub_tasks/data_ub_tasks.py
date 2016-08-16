@@ -252,20 +252,27 @@ def update_fuseki(config, files):
     invalidate_varnish_cache(config['basename'])
     logger.info('Invalidated Varnish cache for %s', config['basename'])
 
-def gen_solr_json(config, vocab_name=None):
-    ttl_file = 'dist/%(basename)s.ttl' % config
-    json_file = 'dist/%(basename)s.json' % config
+def gen_solr_json(config, vocab_name=None, infile=None, outfile=None):
+
+    if infile is None:
+        infile = 'dist/%(basename)s.ttl'
+
+    if outfile is None:
+        outfile = 'dist/%(basename)s.json'
+
+    infile = infile % config
+    outfile = outfile % config
 
     return {
         'basename': 'build-solr-json',
         'doc': 'Generate SOLR JSON from Turtle',
         'file_dep': [
-            ttl_file
+            infile
         ],
         'targets': [
-            json_file
+            outfile
         ],
         'actions': [
-            (ttl2solr, [], {'infile': ttl_file, 'outfile': json_file, 'vocab_name': vocab_name})
+            (ttl2solr, [], {'infile': infile, 'outfile': outfile, 'vocab_name': vocab_name})
         ]
     }
