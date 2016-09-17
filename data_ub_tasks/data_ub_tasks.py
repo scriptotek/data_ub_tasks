@@ -44,13 +44,8 @@ def sha1(filename):
 
 
 def fetch_remote(task, remote, etag_cache):
-    logger.debug('Checking %s', remote)
-    head = requests.head(remote)
-    if head.status_code != 200:
-        logger.warn('Got status code: %s', head.status_code)
-        raise Exception('Got status code: %s', head.status_code)
 
-    if 'etag' in head.headers:
+    def etag_changed(head):
         remote_etag = head.headers['etag']
         if os.path.isfile(etag_cache):
             with open(etag_cache, 'rb') as f:
@@ -64,18 +59,35 @@ def fetch_remote(task, remote, etag_cache):
         if remote_etag == local_etag:
             logger.debug(' -> Local data are up-to-date.')
             task.uptodate = True
-            return
-
-        old_sha1 = sha1(task.targets[0])
-        download(remote, task.targets[0])
-        new_sha1 = sha1(task.targets[0])
+            return False
 
         with open(etag_cache, 'wb') as f:
             f.write(remote_etag.encode('utf-8'))
 
+        return True
+
+    def fetch_and_check_sha1():
+        old_sha1 = sha1(task.targets[0])
+        download(remote, task.targets[0])
+        new_sha1 = sha1(task.targets[0])
+
         if old_sha1 != new_sha1:
             logger.info('%s changed from  %s to %s', remote.split('/')[-1], old_sha1[:7], new_sha1[:7])
             task.uptodate = False
+
+    logger.debug('Checking %s', remote)
+    head = requests.head(remote)
+
+    if head.status_code != 200:
+        logger.warn('Got status code: %s', head.status_code)
+        raise Exception('Got status code: %s', head.status_code)
+
+    if 'etag' not in head.headers:
+        logger.debug('   No Etag header found, this task will always run.')
+        fetch_and_check_sha1()
+
+    elif etag_changed(head):
+        fetch_and_check_sha1()
 
 def git_push_task_gen(config):
     return {
