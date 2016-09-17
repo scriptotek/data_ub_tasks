@@ -72,7 +72,7 @@ def fetch_remote(task, remote, etag_cache):
         new_sha1 = sha1(task.targets[0])
 
         if old_sha1 != new_sha1:
-            logger.info('%s changed from  %s to %s', remote.split('/')[-1], old_sha1[:7], new_sha1[:7])
+            logger.info('%s changed from  %s to %s', task.targets[0], old_sha1[:7], new_sha1[:7])
             task.uptodate = False
 
     logger.debug('Checking %s', remote)
