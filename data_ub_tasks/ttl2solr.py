@@ -54,7 +54,7 @@ schema = {
 }
 
 vocabs = {
-    URIRef('http://data.ub.uio.no/ddc'): 'ddc23no',
+    URIRef('http://dewey.info/scheme/edition/e23/'): 'ddc23no',
     URIRef('http://data.ub.uio.no/humord'): 'humord'
 }
 
