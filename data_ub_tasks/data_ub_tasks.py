@@ -251,8 +251,10 @@ def update_fuseki(config, files):
 
     logger.info("Fuseki: Loading %d triples into <%s> from %s", tc, graph_uri, tmpfile_url)
 
-    store.remove_graph(graph)
-    store.add_graph(graph)
+    # CLEAR GRAPH first to make sure all blank nodes are erased
+    # https://github.com/scriptotek/emnesok/issues/70
+    store.update('CLEAR GRAPH <{}>'.format(graph_uri))
+
     store.update('LOAD <{}> INTO GRAPH <{}>'.format(tmpfile_url, graph_uri))
 
     c1 = get_graph_count(config)
