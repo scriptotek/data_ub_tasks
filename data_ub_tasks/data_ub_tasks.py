@@ -89,6 +89,21 @@ def fetch_remote(task, remote, etag_cache):
     elif etag_changed(head):
         fetch_and_check_sha1()
 
+
+def git_pull_task_gen(config):
+    return {
+        'doc': 'Pull updates from git',
+        'name': 'git-pull',
+        'actions': [
+            'git config user.name "%s"' % config['git_user'],
+            'git config user.email "%s"' % config['git_email'],
+            'git pull',
+            'git config --unset user.name',
+            'git config --unset user.email',
+        ]
+    }
+
+
 def git_push_task_gen(config):
     return {
         'doc': 'Commit and push updated files to GitHub',
@@ -97,8 +112,8 @@ def git_push_task_gen(config):
             'dist/%s.ttl' % config['basename']
         ],
         'actions': [
-            'git config user.name "ubo-bot"',
-            'git config user.email "danmichaelo+ubobot@gmail.com"',
+            'git config user.name "%s"' % config['git_user'],
+            'git config user.email "%s"' % config['git_email'],
             'git add -u',
             'git diff-index --quiet --cached HEAD || git commit -m "Data update"',
             'git push --mirror origin',  # locally updated refs will be force updated on the remote end !
