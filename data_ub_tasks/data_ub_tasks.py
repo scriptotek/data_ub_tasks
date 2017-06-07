@@ -339,10 +339,17 @@ def push_to_elasticsearch(infile, index, vocab_name):
     data = json.load(open(infile))
     conn = Elasticsearch(['localhost:9200'])
 
-    for x in data:
-        x['_id'] = x['id']
-        x['_index'] = index
-        x['_type'] = 'record'
+    for rec in data:
+        rec['_id'] = rec['id']
+        rec['_index'] = index
+        rec['_type'] = 'record'
+        rec['suggest'] = {'input': []}
+        for term in rec['prefLabel']:
+            rec['suggest']['input'].append(term)
+            rec['suggest']['input'].append('{}:{}'.format(rec['vocabulary'], term))
+        for term in rec.get('altLabel', []):
+            rec['suggest']['input'].append(term)
+            rec['suggest']['input'].append('{}:{}'.format(rec['vocabulary'], term))
 
     res = bulk(conn, data, stats_only=True)
     print('%d inserted, %d failed' % res)
