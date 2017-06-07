@@ -9,6 +9,10 @@ import SPARQLWrapper
 from rdflib.graph import Graph, URIRef
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
 import logging
+import json
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk
+
 logging.getLogger('requests').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
 
@@ -306,3 +310,40 @@ def gen_solr_json(config, vocab_name=None, infile=None, outfile=None):
             (ttl2solr, [], {'infile': infile, 'outfile': outfile, 'vocab_name': vocab_name})
         ]
     }
+
+
+def gen_elasticsearch(config, vocab_name=None, infile=None):
+
+    if infile is None:
+        infile = 'dist/%(basename)s.json'
+
+    infile = infile % config
+
+    return {
+        'basename': 'elasticsearch',
+        'doc': 'Push data to Elasticsearch',
+        'file_dep': [
+            infile
+        ],
+        'targets': [
+        ],
+        'verbosity': 2,
+        'uptodate': [False],  # never up-to-date?
+        'actions': [
+            (push_to_elasticsearch, [], {'infile': infile, 'index': config['es_index'], 'vocab_name': vocab_name})
+        ]
+    }
+
+
+def push_to_elasticsearch(infile, index, vocab_name):
+    data = json.load(open(infile))
+    conn = Elasticsearch(['localhost:9200'])
+
+    for x in data:
+        x['_id'] = x['id']
+        x['_index'] = index
+        x['_type'] = 'record'
+
+    res = bulk(conn, data, stats_only=True)
+    print('%d inserted, %d failed' % res)
+
