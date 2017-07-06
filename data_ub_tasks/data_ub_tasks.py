@@ -346,10 +346,10 @@ def push_to_elasticsearch(infile, index, vocab_name):
         rec['suggest'] = {'input': []}
         for term in rec['prefLabel']:
             rec['suggest']['input'].append(term)
-            rec['suggest']['input'].append('{}:{}'.format(rec['vocabulary'], term))
+            rec['suggest']['input'].append(u'{}:{}'.format(rec['vocabulary'], term))
         for term in rec.get('altLabel', []):
             rec['suggest']['input'].append(term)
-            rec['suggest']['input'].append('{}:{}'.format(rec['vocabulary'], term))
+            rec['suggest']['input'].append(u'{}:{}'.format(rec['vocabulary'], term))
 
     res = bulk(conn, data, stats_only=True)
     print('%d inserted, %d failed' % res)
