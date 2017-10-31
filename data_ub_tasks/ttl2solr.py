@@ -33,6 +33,7 @@ schema = {
     SKOS.editorialNote: 'editorialNote',
     MARC21.synthesized: 'synthesized',
     RDF.type: 'type',
+    OWL.deprecated: 'deprecated',
 
     # Ignore:
     SKOS.inScheme: None,
