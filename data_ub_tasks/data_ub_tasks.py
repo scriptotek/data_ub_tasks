@@ -1,7 +1,7 @@
 # encoding=utf8
 import os
 import requests
-from skosify import Skosify
+import skosify
 import hashlib
 from .ttl2solr import ttl2solr
 import textwrap
@@ -208,11 +208,9 @@ def enrich_and_concat(files, out_file):
     for sourcefile in files:
         graph.load(sourcefile, format='turtle')
 
-    skosify = Skosify()
-
-    # Enrichments: broader <-> narrower, related <-> related
     logger.debug("Skosify: Enriching relations")
-    skosify.enrich_relations(graph, False, True, True)
+    skosify.infer.skos_hierarchical(graph, True)
+    skosify.infer.skos_related(graph)
 
     with open(out_file + '.tmp', 'w') as handle:
         graph.serialize(handle, format='turtle')
