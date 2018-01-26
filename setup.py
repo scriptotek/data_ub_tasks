@@ -4,6 +4,7 @@ setup(name='data_ub_tasks',
       version='2.5.5',
       packages=['data_ub_tasks'],
       install_requires=[
+            'doit',
             'rdflib',
             'SPARQLWrapper',
             'requests',

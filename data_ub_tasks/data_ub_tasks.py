@@ -12,6 +12,7 @@ import logging
 import json
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk
+from doit.tools import LongRunning as FailSafe
 
 logging.getLogger('requests').setLevel(logging.WARNING)
 logging.getLogger('urllib3').setLevel(logging.WARNING)
@@ -95,16 +96,17 @@ def fetch_remote(task, remote, etag_cache):
 
 
 def git_pull_task_gen(config):
+    # Note: This task will never fail! If we're not in a Git repo, let's just continue
     return {
         'doc': 'Pull updates from git',
         'name': 'git-pull',
-        'actions': [
+        'actions': [FailSafe(cmd) for cmd in [
             'git config user.name "%s"' % config['git_user'],
             'git config user.email "%s"' % config['git_email'],
             'git pull',
             'git config --unset user.name',
             'git config --unset user.email',
-        ]
+        ]]
     }
 
 
