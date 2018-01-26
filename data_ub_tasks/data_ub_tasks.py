@@ -214,7 +214,7 @@ def enrich_and_concat(files, out_file):
     skosify.infer.skos_hierarchical(graph, True)
     skosify.infer.skos_related(graph)
 
-    with open(out_file + '.tmp', 'w') as handle:
+    with open(out_file + '.tmp', 'wb+') as handle:
         graph.serialize(handle, format='turtle')
 
     os.rename(out_file + '.tmp', out_file)
