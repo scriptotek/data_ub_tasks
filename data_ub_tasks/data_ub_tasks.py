@@ -48,51 +48,52 @@ def sha1(filename):
     return sha1.hexdigest()
 
 
-def fetch_remote(task, remote, etag_cache):
+# TODO: Rename to fetch_remote_action
+def check_remote(task, values, url):
 
-    def etag_changed(head):
-        remote_etag = head.headers['etag']
-        if os.path.isfile(etag_cache):
-            with open(etag_cache, 'rb') as f:
-                local_etag = f.read().decode('utf-8').strip()
-        else:
-            local_etag = '0'
-
-        logger.debug('   Remote file etag: %s', remote_etag)
-        logger.debug('    Local file etag: %s', local_etag)
-
-        if remote_etag == local_etag:
-            logger.debug(' -> Local data are up-to-date.')
-            task.uptodate = True
-            return False
-
-        with open(etag_cache, 'wb') as f:
-            f.write(remote_etag.encode('utf-8'))
-
-        return True
-
-    def fetch_and_check_sha1():
-        old_sha1 = sha1(task.targets[0])
-        download(remote, task.targets[0])
-        new_sha1 = sha1(task.targets[0])
-
-        if old_sha1 != new_sha1:
-            logger.info('%s changed from  %s to %s', task.targets[0], old_sha1[:7], new_sha1[:7])
-            task.uptodate = False
-
-    logger.debug('Checking %s', remote)
-    head = requests.head(remote)
+    logger.debug('Checking %s', url)
+    head = requests.head(url)
 
     if head.status_code != 200:
         logger.warn('Got status code: %s', head.status_code)
         raise Exception('Got status code: %s', head.status_code)
 
-    if 'etag' not in head.headers:
-        logger.debug('   No Etag header found, this task will always run.')
-        fetch_and_check_sha1()
+    etag = head.headers.get('etag')
+    cached_etag = values.get('etag', '')
 
-    elif etag_changed(head):
-        fetch_and_check_sha1()
+    if etag is None:
+        logger.debug('   No ETag header')
+        return False
+
+    logger.debug('   Remote etag: %s', etag)
+    logger.debug('   Cached etag: %s', cached_etag)
+
+    task.value_savers.append(lambda: {'etag': etag})
+
+    return etag == cached_etag
+
+
+def fetch_remote(task, url):
+
+    old_sha1 = sha1(task.targets[0])
+    download(url, task.targets[0])
+    new_sha1 = sha1(task.targets[0])
+
+    # just in case the etag check is not to trust
+    task.uptodate = [old_sha1 == new_sha1]
+
+    if not task.uptodate[0]:
+        logger.info('%s changed from  %s to %s', task.targets[0], old_sha1[:7], new_sha1[:7])
+
+
+def fetch_remote_gen(url, local_file, task_dep):
+    return {
+        'name': local_file,
+        'uptodate': [(check_remote, [], {'url': url})],
+        'actions': [(fetch_remote, [], {'url': url})],
+        'task_dep': task_dep,
+        'targets': [local_file],
+    }
 
 
 def git_pull_task_gen(config):
