@@ -5,6 +5,7 @@ import skosify
 import hashlib
 from .ttl2solr import ttl2solr
 import textwrap
+from io import BytesIO
 import SPARQLWrapper
 from rdflib.graph import Graph, URIRef
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
@@ -121,12 +122,23 @@ def build_mappings_gen(source_files, target, uri_filter='http', prefixes=[]):
         logger.info('Building mappings')
 
         g = load_mappings_from_file(task.file_dep, uri_filter)
-        for pf in prefixes:
-            g.namespace_manager.bind(pf[0], URIRef(pf[1]))
 
-        serializer = OrderedTurtleSerializer(g)
-        with open(task.targets[0], 'wb') as fp:
-            serializer.serialize(fp)
+        if target.endswith('.nt'):
+            stream = BytesIO()
+            g.serialize(stream, format='nt')
+            with open(target, 'wb') as fp:
+                stream.seek(0)
+                fp.writelines(sorted(stream.readlines()))
+
+        elif target.endswith('.ttl'):
+            for pf in prefixes:
+                g.namespace_manager.bind(pf[0], URIRef(pf[1]))
+
+            serializer = OrderedTurtleSerializer(g)
+            with open(task.targets[0], 'wb') as fp:
+                serializer.serialize(fp)
+        else:
+            raise Error('Unknown file ext')
 
         logger.info('Wrote %s'  % task.targets[0])
 
@@ -255,7 +267,10 @@ def quads(iterable, context, chunk_size=20000):
 def enrich_and_concat(files, out_file):
     graph = Graph()
     for sourcefile in files:
-        graph.load(sourcefile, format='turtle')
+        if sourcefile.endswith('.nt'):
+            graph.load(sourcefile, format='nt')
+        else:
+            graph.load(sourcefile, format='turtle')
 
     logger.debug("Skosify: Enriching relations")
     skosify.infer.skos_hierarchical(graph, True)
