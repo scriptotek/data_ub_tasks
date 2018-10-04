@@ -8,6 +8,8 @@ import textwrap
 import SPARQLWrapper
 from rdflib.graph import Graph, URIRef
 from rdflib.plugins.stores.sparqlstore import SPARQLUpdateStore
+from rdflib.namespace import SKOS
+from otsrdflib import OrderedTurtleSerializer
 import logging
 import json
 from elasticsearch import Elasticsearch
@@ -95,6 +97,50 @@ def fetch_remote_gen(url, local_file, task_dep):
         'targets': [local_file],
     }
 
+
+def load_mappings_from_file(filenames, uri_filter='http'):
+    g = Graph()
+    g.namespace_manager.bind('skos', SKOS)
+
+    g2 = Graph()
+    for filename in filenames:
+        g2.load(filename, format='turtle')
+    skosify.infer.skos_symmetric_mappings(g2, related=False)
+
+    for tr in g2:
+        if tr[1] in [SKOS.exactMatch, SKOS.closeMatch, SKOS.relatedMatch, SKOS.broadMatch, SKOS.narrowMatch]:
+            if tr[0].startswith(uri_filter):
+                g.add(tr)
+                # q[0][0].strip()http://data.ub.uio.no/realfagstermer/c0
+    return g
+
+
+def build_mappings_gen(source_files, target, uri_filter='http', prefixes=[]):
+
+    def build(task):
+        logger.info('Building mappings')
+
+        g = load_mappings_from_file(task.file_dep, uri_filter)
+        for pf in prefixes:
+            g.namespace_manager.bind(pf[0], URIRef(pf[1]))
+
+        serializer = OrderedTurtleSerializer(g)
+        with open(task.targets[0], 'wb') as fp:
+            serializer.serialize(fp)
+
+        logger.info('Wrote %s'  % task.targets[0])
+
+    yield {
+        'basename': 'build-mappings',
+        'name': target,
+        'actions': [
+            'mkdir -p dist',
+            build
+        ],
+        # 'uptodate': [lambda x: False],
+        'file_dep': source_files,
+        'targets': [target],
+    }
 
 def git_pull_task_gen(config):
     # Note: This task will never fail! If we're not in a Git repo, let's just continue
