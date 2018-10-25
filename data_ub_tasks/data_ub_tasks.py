@@ -107,6 +107,7 @@ def load_mappings_from_file(filenames, uri_filter='http'):
     for filename in filenames:
         g2.load(filename, format='turtle')
     skosify.infer.skos_symmetric_mappings(g2, related=False)
+    skosify.infer.skos_hierarchical_mappings(g2, narrower=True)
 
     for tr in g2:
         if tr[1] in [SKOS.exactMatch, SKOS.closeMatch, SKOS.relatedMatch, SKOS.broadMatch, SKOS.narrowMatch]:
