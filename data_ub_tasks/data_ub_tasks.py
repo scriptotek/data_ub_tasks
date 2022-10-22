@@ -269,11 +269,11 @@ def enrich_and_concat(files, out_file):
     graph = Graph()
     for sourcefile in files:
         if sourcefile.endswith('.nt'):
-            graph.load(sourcefile, format='nt')
+            graph.parse(sourcefile, format='nt')
         elif sourcefile.endswith('.ttl'):
-            graph.load(sourcefile, format='turtle')
+            graph.parse(sourcefile, format='turtle')
         else:
-            graph.load(sourcefile)
+            graph.parse(sourcefile)
 
     logger.debug("Skosify: Enriching relations")
     skosify.infer.skos_hierarchical(graph, True)
