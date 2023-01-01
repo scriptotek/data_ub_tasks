@@ -105,7 +105,7 @@ def load_mappings_from_file(filenames, uri_filter='http'):
 
     g2 = Graph()
     for filename in filenames:
-        g2.load(filename, format='turtle')
+        g2.parse(filename, format='turtle')
     skosify.infer.skos_symmetric_mappings(g2, related=False)
     skosify.infer.skos_hierarchical_mappings(g2, narrower=True)
 

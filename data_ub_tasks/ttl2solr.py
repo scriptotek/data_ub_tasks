@@ -92,7 +92,7 @@ def get_breadcrumbs(paths, parents):
 def ttl2solr(infile, outfile, vocab_name=None):
     logger.info('ttl2solr: Loading %s', infile)
     g = Graph()
-    g.load(infile, format='turtle')
+    g.parse(infile, format='turtle')
 
     # Build parent lookup hash
     # logger.debug('Building parent lookup hash')
